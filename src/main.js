@@ -249,7 +249,8 @@ class BootScene extends Phaser.Scene {
       console.error(`Asset failed to load: ${file.src}`);
     });
 
-    this.load.image('cover-panel', '/assets/cover-panel.png');
+    this.load.image('cover-title', '/assets/cover-title.png');
+    this.load.image('cover-start', '/assets/cover-start.png');
     this.load.image('garden', '/assets/garden-4x3.png');
     this.load.image('rat-hole', '/assets/rat-hole.png');
     this.load.image('hammer', '/assets/hammer-cursor.png');
@@ -261,8 +262,6 @@ class BootScene extends Phaser.Scene {
     this.load.image('time-panel', '/assets/time-panel.png');
     this.load.image('instruction-round-1', '/assets/instruction-round-1.png');
     this.load.image('instruction-round-2', '/assets/instruction-round-2.png');
-    this.load.image('round-name-1', '/assets/round-name-1-optimized.png');
-    this.load.image('round-name-2', '/assets/round-name-2-optimized.png');
     this.load.image('hole-instruction-round-1', '/assets/hole-instruction-round-1.png');
     this.load.image('hole-instruction-round-2', '/assets/hole-instruction-round-2.png');
     this.load.image('intro-stage-1-cloud', '/assets/intro-stage-1-cloud.png');
@@ -280,6 +279,8 @@ class BootScene extends Phaser.Scene {
     }
   }
   async create() {
+    this.textures.get('cover-title').add('trimmed', 0, 188, 54, 1546, 990);
+    this.textures.get('cover-start').add('trimmed', 0, 175, 349, 1571, 381);
     this.textures.get('score-panel').add('hud', 0, 220, 176, 1480, 728);
     this.textures.get('time-panel').add('hud', 0, 220, 176, 1480, 728);
     this.textures.get('instruction-round-1').add('hud', 0, 60, 220, 1810, 650);
@@ -339,33 +340,30 @@ class CoverScene extends BaseScene {
       this.scene.start('Intro', { round: 0 });
     };
 
-    const panel = this.add.image(W / 2, IS_MOBILE_PORTRAIT ? H * .5 : 381, 'cover-panel')
-      .setDisplaySize(IS_MOBILE_PORTRAIT ? 762.5 : 900, IS_MOBILE_PORTRAIT ? 508.75 : 600)
-      .setDepth(40)
-      .setInteractive();
-    const coverHeading = addText(this, W / 2, IS_MOBILE_PORTRAIT ? 70 : 107, 'التَّدْرِيبُ التَّفَاعُل', {
-      arabic: true,
-      fontSize: IS_MOBILE_PORTRAIT ? '42.5px' : '42px',
-      color: '#000000'
-    });
-    coverHeading.setPadding(14, 18, 14, 18).setDepth(41);
-    const restingScaleX = panel.scaleX;
-    const restingScaleY = panel.scaleY;
-    panel.on('pointerover', () => this.tweens.add({
-      targets: panel,
-      scaleX: restingScaleX * 1.025,
-      scaleY: restingScaleY * 1.025,
+    this.add.image(W / 2, IS_MOBILE_PORTRAIT ? H * .39 : 315, 'cover-title', 'trimmed')
+      .setDisplaySize(IS_MOBILE_PORTRAIT ? 610 : 620, IS_MOBILE_PORTRAIT ? 391 : 397)
+      .setDepth(40);
+    const startButton = this.add.image(W / 2, IS_MOBILE_PORTRAIT ? H * .69 : 585, 'cover-start', 'trimmed')
+      .setDisplaySize(IS_MOBILE_PORTRAIT ? 470 : 390, IS_MOBILE_PORTRAIT ? 114 : 95)
+      .setDepth(41)
+      .setInteractive({ pixelPerfect: true, alphaTolerance: 16 });
+    const restingScaleX = startButton.scaleX;
+    const restingScaleY = startButton.scaleY;
+    startButton.on('pointerover', () => this.tweens.add({
+      targets: startButton,
+      scaleX: restingScaleX * 1.035,
+      scaleY: restingScaleY * 1.035,
       duration: 110
     }));
-    panel.on('pointerout', () => this.tweens.add({
-      targets: panel,
+    startButton.on('pointerout', () => this.tweens.add({
+      targets: startButton,
       scaleX: restingScaleX,
       scaleY: restingScaleY,
       duration: 110
     }));
-    panel.on('pointerdown', () => this.tweens.add({
-      targets: panel,
-      y: panel.y + 6,
+    startButton.on('pointerdown', () => this.tweens.add({
+      targets: startButton,
+      y: startButton.y + 6,
       duration: 65,
       yoyo: true,
       onComplete: start
@@ -384,13 +382,6 @@ class IntroScene extends BaseScene {
     this.addBackdrop();
     this.addHoles();
     this.add.rectangle(W / 2, H / 2, VIEW_WORLD_W, H, 0xffffff, .45).setDepth(30);
-    const introHeading = addText(this, W / 2, IS_MOBILE_PORTRAIT ? 70 : 107, 'التَّدْرِيبُ التَّفَاعُل', {
-      arabic: true,
-      fontSize: IS_MOBILE_PORTRAIT ? '34px' : '42px',
-      color: '#000000'
-    });
-    introHeading.setPadding(14, 18, 14, 18).setDepth(41);
-
     const introCloudKey = `intro-stage-${this.roundIndex + 1}-cloud`;
     const introCloud = this.add.image(W / 2, IS_MOBILE_PORTRAIT ? H * .5 : 410, introCloudKey)
       .setDisplaySize(IS_MOBILE_PORTRAIT ? 510 : 720, IS_MOBILE_PORTRAIT ? 340 : 480)
@@ -442,7 +433,6 @@ class GameScene extends BaseScene {
     this.addBackdrop();
     this.addHoles();
     const instructionKey = `instruction-round-${this.roundIndex + 1}`;
-    const roundNameKey = `round-name-${this.roundIndex + 1}`;
     const holeInstructionKey = `hole-instruction-round-${this.roundIndex + 1}`;
     const mobileHoleInstructionWidth = 234;
     const mobileHoleInstructionHeight = 256.5;
@@ -456,7 +446,7 @@ class GameScene extends BaseScene {
       )
       .setDepth(4);
     const scorePanelX = IS_MOBILE_PORTRAIT ? 78 : 73;
-    const timePanelX = IS_MOBILE_PORTRAIT ? W - 78 : 227;
+    const timePanelX = W - (IS_MOBILE_PORTRAIT ? 78 : 73);
     const topPanelY = IS_MOBILE_PORTRAIT ? 64 : 75.6;
     this.add.image(scorePanelX, topPanelY, 'score-panel', 'hud')
       .setDisplaySize(IS_MOBILE_PORTRAIT ? 145 : 136, IS_MOBILE_PORTRAIT ? 72 : 67).setDepth(25);
@@ -465,24 +455,10 @@ class GameScene extends BaseScene {
     this.add.image(IS_MOBILE_PORTRAIT ? W / 2 : 500, IS_MOBILE_PORTRAIT ? 222 : 102, instructionKey, 'hud')
       .setDisplaySize(IS_MOBILE_PORTRAIT ? 525 : 390, IS_MOBILE_PORTRAIT ? 188.75 : 140).setDepth(25);
 
-    const roundName = this.add.image(IS_MOBILE_PORTRAIT ? W / 2 : 850, IS_MOBILE_PORTRAIT ? 64 : 76.2, roundNameKey)
-      .setDisplaySize(180, 86).setDepth(25);
-    roundName.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-    const roundNameMaskShape = this.make.graphics({ add: false });
-    roundNameMaskShape.fillStyle(0xffffff);
-    roundNameMaskShape.fillRoundedRect(
-      IS_MOBILE_PORTRAIT ? W / 2 - 90 : 760,
-      IS_MOBILE_PORTRAIT ? 21 : 33.2,
-      180,
-      86,
-      12
-    );
-    roundName.setMask(roundNameMaskShape.createGeometryMask());
-
     this.scoreText = addText(this, IS_MOBILE_PORTRAIT ? 106 : 100, IS_MOBILE_PORTRAIT ? 81 : 91.6, '٥ / ٠', {
       arabic: true, fontSize: '21px', color: '#29441c'
     }).setDepth(27);
-    this.timerText = addText(this, IS_MOBILE_PORTRAIT ? W - 51 : 254, IS_MOBILE_PORTRAIT ? 81 : 91.6, '٣٠', {
+    this.timerText = addText(this, W - (IS_MOBILE_PORTRAIT ? 51 : 46), IS_MOBILE_PORTRAIT ? 81 : 91.6, '٣٠', {
       arabic: true, fontSize: '23px', color: '#29441c'
     }).setDepth(27);
     this.input.setDefaultCursor('none');
@@ -526,7 +502,7 @@ class GameScene extends BaseScene {
     const usesImageBubble = Boolean(word[2]);
     const container = this.add.container(spot[0], spot[1] + 90).setDepth(15);
     const dialogContainer = this.add.container(spot[0], spot[1] + 70).setDepth(30);
-    const mouse = this.add.image(0, 0, 'mouse').setDisplaySize(139, 139);
+    const mouse = this.add.image(0, 0, 'mouse').setDisplaySize(139, 139).setAlpha(1);
     const pill = this.add.image(0, usesImageBubble ? -120 : -105, word[2] ?? 'word-dialog')
       .setDisplaySize(usesImageBubble ? 143 : 184, usesImageBubble ? 128 : 101)
       .setVisible(false);
@@ -707,10 +683,10 @@ class ResultsScene extends BaseScene {
     this.add.image(W / 2, resultsPanelY, 'results-panel', 'trimmed')
       .setDisplaySize(IS_MOBILE_PORTRAIT ? 540 : 486, IS_MOBILE_PORTRAIT ? 556 : 500)
       .setDepth(40);
-    this.add.image(W / 2, resultsPanelY + (IS_MOBILE_PORTRAIT ? 20 : 18), `results-stars-${Phaser.Math.Clamp(scores[0], 0, 5)}`, 'trimmed')
+    this.add.image(W / 2, resultsPanelY + (IS_MOBILE_PORTRAIT ? 32 : 30), `results-stars-${Phaser.Math.Clamp(scores[0], 0, 5)}`, 'trimmed')
       .setDisplaySize(IS_MOBILE_PORTRAIT ? 326 : 297, IS_MOBILE_PORTRAIT ? 66 : 60)
       .setDepth(41);
-    this.add.image(W / 2, resultsPanelY + (IS_MOBILE_PORTRAIT ? 190 : 171), `results-stars-${Phaser.Math.Clamp(scores[1], 0, 5)}`, 'trimmed')
+    this.add.image(W / 2, resultsPanelY + (IS_MOBILE_PORTRAIT ? 202 : 183), `results-stars-${Phaser.Math.Clamp(scores[1], 0, 5)}`, 'trimmed')
       .setDisplaySize(IS_MOBILE_PORTRAIT ? 326 : 297, IS_MOBILE_PORTRAIT ? 66 : 60)
       .setDepth(41);
 
