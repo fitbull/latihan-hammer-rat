@@ -131,29 +131,44 @@ function makeButton(scene, x, y, width, label, onClick, options = {}) {
   return { bg, text, items };
 }
 
+class GameAudio {
+  constructor() {
+    this.soundEnabled = true;
+    this.musicEnabled = true;
+    this.music = new Audio('/assets/audio/music-background.mp3');
+    this.music.preload = 'auto';
+    this.music.loop = true;
+    this.music.volume = .16;
+    this.effects = Object.fromEntries(['click', 'correct', 'wrong', 'complete'].map(name => {
+      const audio = new Audio(`/assets/audio/sfx-${name}.mp3`);
+      audio.preload = 'auto';
+      return [name, audio];
+    }));
+  }
+  playEffect(name, volume = .72) {
+    if (!this.soundEnabled || !this.effects[name]) return;
+    const audio = this.effects[name].cloneNode(true);
+    audio.volume = volume;
+    audio.play().catch(() => {});
+  }
+  startMusic() {
+    if (!this.musicEnabled || !this.music.paused) return;
+    this.music.play().catch(() => {});
+  }
+  stopMusic() { this.music.pause(); }
+  setSoundEnabled(enabled) { this.soundEnabled = Boolean(enabled); }
+  setMusicEnabled(enabled) {
+    this.musicEnabled = Boolean(enabled);
+    if (this.musicEnabled) this.startMusic(); else this.stopMusic();
+  }
+}
+
+const gameAudio = new GameAudio();
+
 function playTone(type = 'pop') {
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtx) return;
-  const ctx = playTone.ctx ??= new AudioCtx();
-  const now = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain); gain.connect(ctx.destination);
-  const presets = {
-    start: [440, 740, .35, 'triangle'],
-    pop: [300, 520, .12, 'sine'],
-    hit: [520, 880, .2, 'triangle'],
-    wrong: [180, 95, .28, 'sawtooth'],
-    win: [520, 1040, .55, 'triangle']
-  };
-  const [from, to, duration, wave] = presets[type] ?? presets.pop;
-  osc.type = wave;
-  osc.frequency.setValueAtTime(from, now);
-  osc.frequency.exponentialRampToValueAtTime(to, now + duration);
-  gain.gain.setValueAtTime(.001, now);
-  gain.gain.exponentialRampToValueAtTime(.16, now + .02);
-  gain.gain.exponentialRampToValueAtTime(.001, now + duration);
-  osc.start(now); osc.stop(now + duration);
+  const effect = { start: 'click', pop: 'click', hit: 'correct', wrong: 'wrong', win: 'complete' }[type] ?? 'click';
+  if (type === 'start') gameAudio.startMusic();
+  gameAudio.playEffect(effect, type === 'pop' ? .3 : .72);
 }
 
 class BaseScene extends Phaser.Scene {
@@ -361,13 +376,16 @@ class CoverScene extends BaseScene {
       scaleY: restingScaleY,
       duration: 110
     }));
-    startButton.on('pointerdown', () => this.tweens.add({
-      targets: startButton,
-      y: startButton.y + 6,
-      duration: 65,
-      yoyo: true,
-      onComplete: start
-    }));
+    startButton.on('pointerdown', () => {
+      gameAudio.startMusic();
+      this.tweens.add({
+        targets: startButton,
+        y: startButton.y + 6,
+        duration: 65,
+        yoyo: true,
+        onComplete: start
+      });
+    });
     this.input.keyboard.once('keydown-SPACE', start);
     this.input.keyboard.once('keydown-ENTER', start);
     this.addSystemPointer();
@@ -408,13 +426,16 @@ class IntroScene extends BaseScene {
       scaleY: cloudScaleY,
       duration: 110
     }));
-    introCloud.on('pointerdown', () => this.tweens.add({
-      targets: introCloud,
-      y: introCloud.y + 6,
-      duration: 65,
-      yoyo: true,
-      onComplete: go
-    }));
+    introCloud.on('pointerdown', () => {
+      gameAudio.startMusic();
+      this.tweens.add({
+        targets: introCloud,
+        y: introCloud.y + 6,
+        duration: 65,
+        yoyo: true,
+        onComplete: go
+      });
+    });
     this.input.keyboard.once('keydown-SPACE', go);
     this.input.keyboard.once('keydown-ENTER', go);
     this.addSystemPointer();
@@ -619,8 +640,8 @@ class GameScene extends BaseScene {
     const scores = this.registry.get('scores') ?? [0, 0];
     scores[this.roundIndex] = this.score;
     this.registry.set('scores', scores);
-    playTone(this.score >= 3 ? 'win' : 'wrong');
     if (this.roundIndex === 0) {
+      playTone(this.score >= 3 ? 'win' : 'wrong');
       this.scene.start('Intro', { round: 1 });
     } else {
       this.scene.start('Results', { round: this.roundIndex, score: this.score });
@@ -714,7 +735,11 @@ class ResultsScene extends BaseScene {
         y: button.y + 5,
         duration: 55,
         yoyo: true,
-        onComplete: onClick
+        onComplete: () => {
+          gameAudio.playEffect('click');
+          if (texture === 'results-replay-button') gameAudio.startMusic();
+          onClick();
+        }
       }));
     };
 
@@ -726,6 +751,7 @@ class ResultsScene extends BaseScene {
       this.registry.set('scores', [0, 0]);
       this.scene.start('Intro', { round: 0 });
     });
+    gameAudio.stopMusic();
     playTone('win');
     this.addSystemPointer();
   }
