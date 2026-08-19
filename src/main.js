@@ -447,10 +447,12 @@ class GameScene extends BaseScene {
   init(data) {
     this.roundIndex = data.round ?? 0;
     this.score = 0; this.seconds = 30; this.activeMouse = null; this.ended = false;
+    this.wordQueue = [];
   }
   create() {
     this.prepareView();
     this.dataDef = ROUND_DATA[this.roundIndex];
+    this.wordQueue = Phaser.Utils.Array.Shuffle([...this.dataDef.words]);
     this.addBackdrop();
     this.addHoles();
     const instructionKey = `instruction-round-${this.roundIndex + 1}`;
@@ -518,8 +520,12 @@ class GameScene extends BaseScene {
   }
   spawnMouse() {
     if (this.ended || this.activeMouse) return;
+    if (this.wordQueue.length === 0) {
+      this.finishRound();
+      return;
+    }
     const spot = Phaser.Utils.Array.GetRandom(HOLES);
-    const word = Phaser.Utils.Array.GetRandom(this.dataDef.words);
+    const word = this.wordQueue.shift();
     const usesImageBubble = Boolean(word[2]);
     const container = this.add.container(spot[0], spot[1] + 90).setDepth(15);
     const dialogContainer = this.add.container(spot[0], spot[1] + 70).setDepth(30);
@@ -608,11 +614,7 @@ class GameScene extends BaseScene {
       duration: 180,
       ease: 'Back.Out'
     });
-    if (this.score >= 5) {
-      this.time.delayedCall(900, () => this.finishRound());
-    } else {
-      this.time.delayedCall(850, () => this.hideMouse(container, true));
-    }
+    this.time.delayedCall(850, () => this.hideMouse(container, true));
   }
   hideMouse(container, fast) {
     if (!container?.active) return;
